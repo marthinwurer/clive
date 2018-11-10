@@ -35,6 +35,8 @@ def main():
     #     logger.info(directive)
     for name, rule in cfg_parser.name_to_rule.items():
         logger.info("%s: %s" % (name, rule))
+    for name, rule in cfg_parser.directives.items():
+        logger.info("%s: %s" % (name, rule))
 
 
 

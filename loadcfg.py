@@ -15,8 +15,6 @@ def append_or_add(d, k, i):
         d[k] = [i]
 
 
-
-
 # rules can match any of their items, productions must match all
 
 
@@ -33,10 +31,11 @@ class Production:
             matched += rule_matched
         return matched
 
+    def __repr__(self):
+        return "Production(%s)" % (", ".join([x.name for x in self.items]))
+
     def __str__(self):
         return ", ".join([x.name for x in self.items])
-
-
 
 
 class Rule:
@@ -65,6 +64,7 @@ class CFG:
         self.keywords = []
         self.rules = []
         self.directives = {}
+        self.unresolved_directives = {}
         self.base_rule = None
 
         self.name_to_rule = {}
@@ -97,7 +97,7 @@ class CFG:
     def add_directive(self, rule, production):
         name = rule.string
         rule_names = [x.string for x in production]
-        append_or_add(self.directives, name, rule_names)
+        append_or_add(self.unresolved_directives, name, rule_names)
 
     def load(self):
         with open(self.config_file) as file:
@@ -167,17 +167,17 @@ class CFG:
                         self.add_rule(rule, production)
                 elif rule.token == BaseToken.ROOT:
                     # new parser directive
-                    self.add_directive(rule, production)
+                    self.add_rule(rule, production)
                 else:
                     # something went wrong with this line, error
                     logger.error("Expected keyword, directive, or identifier, got %s" % rule)
                     logger.error(line)
                     raise SyntaxError
 
-        # parse the directives
-        if "$INDENT" in self.directives:
+        # parse the indent directives
+        if "$INDENT" in self.unresolved_directives:
             self.name_to_rule["$INDENT"] = INDENT_TOKEN
-        if "$DEDENT" in self.directives:
+        if "$DEDENT" in self.unresolved_directives:
             self.name_to_rule["$DEDENT"] = DEDENT_TOKEN
 
         fully_resolved = self.name_to_rule  # should be name to rule or name to test?
@@ -197,24 +197,22 @@ class CFG:
                 new_production = Production(resolved)
                 fully_resolved[name].add_production(new_production)
 
+        # parse the rest of the directives
+        for name, productions in self.unresolved_directives.items():
+            resolved = []  # resolution is out here because I just want everything
+            for production in productions:
+                for rule in production:
+                    if rule in fully_resolved:
+                        resolved.append(fully_resolved[rule])
+                    else:
+                        logger.error("Failed to resolve %s" % rule)
+                        raise SyntaxError
 
+            # if you make the end, then append the resolved production to our fully resolved value
+            self.directives[name] = resolved
 
-def resolve_production(fully_resolved, waiting, unresolved, production, name_of_rule):
-    resolved = []
-    for rule in production:
-        if rule in fully_resolved:
-            resolved.append(fully_resolved[rule])
-        else:
-            append_or_add(waiting, rule, name_of_rule)
-            return None
-
-
-
-
-
-
-
-
+    def tokenize_file(self, file_name):
+        pass
 
 
 
