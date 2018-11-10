@@ -3,7 +3,7 @@ import logging
 import re
 
 from tokenizer import tokenize
-from tokens import BaseToken, split_tokens
+from tokens import BaseToken, split_tokens, TokenParser, INDENT_TOKEN, DEDENT_TOKEN
 
 logger = logging.getLogger(__name__)
 
@@ -16,28 +16,8 @@ def append_or_add(d, k, i):
 
 
 
-class LegalToken:
-    def __init__(self, name, regex):
-        self.name = name
-        self.value = regex
-        self.regex = re.compile(regex)
 
-    def match(self, string, start):
-        value = self.regex.match(string, start)
-        return value
-
-    def __eq__(self, other):
-        return hasattr(other, "name") and other.name == self.name
-
-    def __repr__(self):
-        return "LegalToken(name=%r, regex=%r)" % (self.name, self.value)
-
-    def matches(self, tok_list, index):
-        # returns the number of items matched from the index in the list
-        if tok_list[index].token == self:
-            return 1
-        else:
-            return 0
+# rules can match any of their items, productions must match all
 
 
 class Production:
@@ -53,6 +33,9 @@ class Production:
             matched += rule_matched
         return matched
 
+    def __str__(self):
+        return ", ".join([x.name for x in self.items])
+
 
 
 
@@ -60,6 +43,9 @@ class Rule:
     def __init__(self, name, productions):
         self.name = name
         self.productions = productions
+
+    def add_production(self, production):
+        self.productions.append(production)
 
     def matches(self, tok_list, index):
         # returns the number of items matched from the index in the list
@@ -81,27 +67,32 @@ class CFG:
         self.directives = {}
         self.base_rule = None
 
-        self.name_to_productions = {}
+        self.name_to_rule = {}
         self.name_to_production_names = {}
+        self.unresolved_productions = {}  # maps rule name to its productions
 
     def add_token(self, rule, regex):
         name = rule.string
         value = ast.literal_eval(regex.string)  # strip off the quotes and correctly escape the value
-        new_token = LegalToken(name, value)
+        new_token = TokenParser(name, value)
         self.tokens.append(new_token)
-        append_or_add(self.name_to_productions, name, new_token)
+        self.name_to_rule[name] = new_token
 
     def add_keyword(self, rule, regex):
         name = rule.string
         value = ast.literal_eval(regex.string)  # strip off the quotes and correctly escape the value
-        new_keyword = LegalToken(name, value)
+        new_keyword = TokenParser(name, value)
         self.keywords.append(new_keyword)
-        append_or_add(self.name_to_productions, name, new_keyword)
+        self.name_to_rule[name] = new_keyword
 
     def add_rule(self, rule, production):
         name = rule.string
         rule_names = [x.string for x in production]
-        append_or_add(self.name_to_production_names, name, rule_names)
+        new_rule = Rule(name, [])
+        if name not in self.name_to_rule:
+            self.name_to_rule[name] = new_rule
+            self.unresolved_productions[name] = []
+        self.unresolved_productions[name].append(rule_names)
 
     def add_directive(self, rule, production):
         name = rule.string
@@ -182,6 +173,44 @@ class CFG:
                     logger.error("Expected keyword, directive, or identifier, got %s" % rule)
                     logger.error(line)
                     raise SyntaxError
+
+        # parse the directives
+        if "$INDENT" in self.directives:
+            self.name_to_rule["$INDENT"] = INDENT_TOKEN
+        if "$DEDENT" in self.directives:
+            self.name_to_rule["$DEDENT"] = DEDENT_TOKEN
+
+        fully_resolved = self.name_to_rule  # should be name to rule or name to test?
+        unresolved = self.unresolved_productions
+        # once the file has been loaded, then we can have fun putting together the productions
+        for name, productions in unresolved.items():
+            for production in productions:
+                resolved = []
+                for rule in production:
+                    if rule in fully_resolved:
+                        resolved.append(fully_resolved[rule])
+                    else:
+                        logger.error("Failed to resolve %s" % rule)
+                        raise SyntaxError
+
+                # if you make the end, then append the resolved production to our fully resolved value
+                new_production = Production(resolved)
+                fully_resolved[name].add_production(new_production)
+
+
+
+def resolve_production(fully_resolved, waiting, unresolved, production, name_of_rule):
+    resolved = []
+    for rule in production:
+        if rule in fully_resolved:
+            resolved.append(fully_resolved[rule])
+        else:
+            append_or_add(waiting, rule, name_of_rule)
+            return None
+
+
+
+
 
 
 

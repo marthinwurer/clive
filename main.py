@@ -27,12 +27,14 @@ def main():
     cfg_parser = CFG(args.file)
     cfg_parser.load()
     logger.info(cfg_parser.tokens)
-    for token in cfg_parser.tokens:
-        logger.info(token)
-    for keyword in cfg_parser.keywords:
-        logger.info(keyword)
-    for directive in cfg_parser.directives:
-        logger.info(directive)
+    # for token in cfg_parser.tokens:
+    #     logger.info(token)
+    # for keyword in cfg_parser.keywords:
+    #     logger.info(keyword)
+    # for directive in cfg_parser.directives:
+    #     logger.info(directive)
+    for name, rule in cfg_parser.name_to_rule.items():
+        logger.info("%s: %s" % (name, rule))
 
 
 

@@ -5,6 +5,32 @@ from enum import Enum
 logger = logging.getLogger(__name__)
 
 
+class TokenParser:
+    def __init__(self, name, regex):
+        self.name = name
+        self.value = regex
+        self.regex = re.compile(regex)
+
+    def match(self, string, start):
+        value = self.regex.match(string, start)
+        return value
+
+    def __eq__(self, other):
+        return hasattr(other, "name") and other.name == self.name
+
+    def __repr__(self):
+        return "LegalToken(name=%r, regex=%r)" % (self.name, self.value)
+
+    def matches(self, tok_list, index):
+        # returns the number of items matched from the index in the list
+        if tok_list[index].token == self:
+            return 1
+        else:
+            return 0
+
+INDENT_TOKEN = TokenParser("$INDENT", "$INDENT")
+DEDENT_TOKEN = TokenParser("$DEDENT", "$DEDENT")
+
 class Token:
     def __init__(self, string, token, line_number, column, file):
         self.string = string

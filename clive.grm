@@ -39,9 +39,10 @@ CONTINUED_NEWLINE : "\\\n"
 INLINE_COMMENT : "//.*"
 IDENTIFIER : "[a-zA-Z][a-zA-Z0-9_]*"
 
-# Keywords
+# Keywords (case insensitive)
 @TRUE : "true"
 @FALSE : "false"
+@IF : "if"
 @FUNCTION : "function"
 @RETURN : "return"
 @OPERATOR : "operator" # binds an identifier to an operator
@@ -57,20 +58,24 @@ constant: number
 
 sub_expression: IDENTIFIER
 sub_expression: constant
-sub_expression: ternary
+sub_expression: ternary # make sure this is last so it doesn't go infinite
 
 expression: OPEN_PAREN sub_expression CLOSE_PAREN
 expression: sub_expression
 
-ternary: expression QUESTION expression COLON expression
+# this might be an issue. infinite depth with other expressions?
+ternary_initial: expression QUESTION
+ternary: ternary_initial expression COLON expression
 
 return_statement: @RETURN expression
 
-argument_definition: IDENTIFIER
 argument_definition: IDENTIFIER COLON IDENTIFIER
+argument_definition: IDENTIFIER
 
 argument_definitions: argument_definition
 argument_definitions: argument_definition COMMA argument_definitions
+
+return_definitions:
 
 function_definition: @FUNCTION IDENTIFIER OPEN_PAREN argument_definitions CLOSE_PAREN return_definitions COLON scope
 
