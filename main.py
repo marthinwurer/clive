@@ -1,10 +1,8 @@
 import argparse
 import logging
 import logging.config
-import sys
 
 from loadcfg import CFG
-from tokenizer import FileTokenizer
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +25,14 @@ def main():
 
     logger.debug("opening file")
     cfg_parser = CFG(args.file)
-    cfg_parser.parse_file()
+    cfg_parser.load()
+    logger.info(cfg_parser.tokens)
+    for token in cfg_parser.tokens:
+        logger.info(token)
+    for keyword in cfg_parser.keywords:
+        logger.info(keyword)
+    for directive in cfg_parser.directives:
+        logger.info(directive)
 
 
 

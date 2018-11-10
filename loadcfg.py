@@ -1,7 +1,9 @@
+import ast
 import logging
+import re
 
-from tokenizer import FileTokenizer, tokenize
-from tokens import BaseToken, STRIP_TOKENS, split_tokens
+from tokenizer import tokenize
+from tokens import BaseToken, split_tokens
 
 logger = logging.getLogger(__name__)
 
@@ -13,30 +15,100 @@ def append_or_add(d, k, i):
         d[k] = [i]
 
 
+
+class LegalToken:
+    def __init__(self, name, regex):
+        self.name = name
+        self.value = regex
+        self.regex = re.compile(regex)
+
+    def match(self, string, start):
+        value = self.regex.match(string, start)
+        return value
+
+    def __eq__(self, other):
+        return hasattr(other, "name") and other.name == self.name
+
+    def __repr__(self):
+        return "LegalToken(name=%r, regex=%r)" % (self.name, self.value)
+
+    def matches(self, tok_list, index):
+        # returns the number of items matched from the index in the list
+        if tok_list[index].token == self:
+            return 1
+        else:
+            return 0
+
+
+class Production:
+    def __init__(self, items):
+        self.items = items
+
+    def matches(self, tok_list, index):
+        matched = 0
+        for rule in self.items:
+            rule_matched = rule.matches(tok_list, index + matched)
+            if rule_matched == 0:
+                return 0  # all rules in a production must match to be valid
+            matched += rule_matched
+        return matched
+
+
+
+
+class Rule:
+    def __init__(self, name, productions):
+        self.name = name
+        self.productions = productions
+
+    def matches(self, tok_list, index):
+        # returns the number of items matched from the index in the list
+        for production in self.productions:
+            matched = production.matches(tok_list, index)
+            if matched == 0:
+                continue  # try the next production
+
+    def __repr__(self):
+        return "Rule(name=%r, productions=%r)" % (self.name, self.productions)
+
+
 class CFG:
     def __init__(self, file_name):
         self.config_file = file_name
         self.tokens = []
         self.keywords = []
         self.rules = []
+        self.directives = {}
         self.base_rule = None
 
         self.name_to_productions = {}
-        self.token_name_to_regex = {}
+        self.name_to_production_names = {}
 
     def add_token(self, rule, regex):
-        pass
+        name = rule.string
+        value = ast.literal_eval(regex.string)  # strip off the quotes and correctly escape the value
+        new_token = LegalToken(name, value)
+        self.tokens.append(new_token)
+        append_or_add(self.name_to_productions, name, new_token)
 
     def add_keyword(self, rule, regex):
-        pass
+        name = rule.string
+        value = ast.literal_eval(regex.string)  # strip off the quotes and correctly escape the value
+        new_keyword = LegalToken(name, value)
+        self.keywords.append(new_keyword)
+        append_or_add(self.name_to_productions, name, new_keyword)
 
     def add_rule(self, rule, production):
-        pass
+        name = rule.string
+        rule_names = [x.string for x in production]
+        append_or_add(self.name_to_production_names, name, rule_names)
 
     def add_directive(self, rule, production):
-        pass
+        name = rule.string
+        rule_names = [x.string for x in production]
+        append_or_add(self.directives, name, rule_names)
 
-    def parse_file(self):
+    def load(self):
         with open(self.config_file) as file:
             for line_num, line in enumerate(file):
                 logger.debug("Line num: %s" % line_num)
@@ -98,7 +170,7 @@ class CFG:
                 elif rule.token == BaseToken.IDENTIFIER:
                     # if the first item is an identifier, then it's a rule or token
                     # it's a token if the only production it has is a string
-                    if len(production) == 1 and production[0] == BaseToken.STRING:
+                    if len(production) == 1 and production[0].token == BaseToken.STRING:
                         self.add_token(rule, production[0])
                     else:
                         self.add_rule(rule, production)

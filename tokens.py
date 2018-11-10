@@ -85,9 +85,8 @@ STRIP_TOKENS = [BaseToken.SPACE, BaseToken.TAB, BaseToken.INLINE_COMMENT, BaseTo
 WHITESPACE_SKIP = [BaseToken.NEWLINE, BaseToken.INLINE_COMMENT]
 
 
-def get_token(string, start):
-    for parser in BaseToken:
-        logger.debug("parser: %s" % parser)
+def get_token(string, start, tokens=BaseToken):
+    for parser in tokens:
         match = parser.match(string, start)
         if match:
             return match, parser

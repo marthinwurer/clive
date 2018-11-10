@@ -16,7 +16,6 @@ def tokenize(string, line_number=1, file_name=None):
     tokens = []
     start = 0
     while start < len(string):
-        logger.debug("char: %s" % start)
         match, token = get_token(string, start)
         if match:
             # get the string value of the token
@@ -85,7 +84,6 @@ class FileTokenizer:
 
     def tokenize_file(self):
         for line_num, line in enumerate(self.file):
-            logger.debug("Line num: %s" % line_num)
             line_tokens = tokenize(line, line_num, self.file_name)
 
             # do whitespace handling
@@ -93,7 +91,6 @@ class FileTokenizer:
             # count the number of whitespace tokens in this line
             current_indentation = self.get_current_indentation(line_tokens)
 
-            logger.debug("Previous/current indents: %s/%s" % (self.previous_indentation, current_indentation))
             # if the indentation is different, then add in indents and dedents as needed
 
             self.add_indent_tokens(current_indentation, line_num)
