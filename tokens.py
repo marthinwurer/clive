@@ -19,8 +19,21 @@ class Token:
         )
 
 
+def split_tokens(tokens, split):
+    to_return = []
+    current = []
+    for token in tokens:
+        if token.token == split:
+            to_return.append(current)
+            current = []
+        else:
+            current.append(token)
+    to_return.append(current)  # add the final one
+    return to_return
+
+
 class CliveKeyword(Enum):
-    TRUE = ("true")
+    TRUE = "true"
     FALSE = "false"
     FUNCTION = "function"
     RETURN = "return"
@@ -40,23 +53,23 @@ class BaseImaginary(Enum):
 
 
 class BaseToken(Enum):
-    INTEGER = ("[0-9]+")
+    INTEGER = "[0-9]+"
+    STRING = "\"[^\"]*\""
+    DIRECTIVE = "\$[a-zA-Z][a-zA-Z0-9_]*"
+    KEYWORD = "@[a-zA-Z][a-zA-Z0-9_]*"
+    IDENTIFIER = "[a-zA-Z][a-zA-Z0-9_]*"
+    INLINE_COMMENT = "#[^\n]*"
     COLON = ":"
     COMMA = ","
     EQUALS = "="
     PLUS = "\+"
     MINUS = "-"
     AT = "@"
+    ROOT = "\$"
     TAB = "\t"
     SPACE = " "
-    QUESTION = "\?"
-    SEMICOLON = ";"
-    OPEN_PAREN = "\("
-    CLOSE_PAREN = "\)"
     NEWLINE = "\n"
     CONTINUED_NEWLINE = "\\\n"
-    INLINE_COMMENT = "//.*"
-    IDENTIFIER = "[a-zA-Z][a-zA-Z0-9_]*"
 
     def __init__(self, regex):
         logger.debug(regex)
@@ -68,10 +81,13 @@ class BaseToken(Enum):
 
 
 WHITESPACE_TOKENS = [BaseToken.SPACE, BaseToken.TAB]
+STRIP_TOKENS = [BaseToken.SPACE, BaseToken.TAB, BaseToken.INLINE_COMMENT, BaseToken.CONTINUED_NEWLINE]
+WHITESPACE_SKIP = [BaseToken.NEWLINE, BaseToken.INLINE_COMMENT]
 
 
 def get_token(string, start):
     for parser in BaseToken:
+        logger.debug("parser: %s" % parser)
         match = parser.match(string, start)
         if match:
             return match, parser

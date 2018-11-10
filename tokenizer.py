@@ -1,19 +1,30 @@
 import logging
 
-from tokens import WHITESPACE_TOKENS, BaseToken, BaseImaginary, Token, KEYWORD_LOOKUP, get_token
+from tokens import WHITESPACE_TOKENS, STRIP_TOKENS, WHITESPACE_SKIP, BaseToken, BaseImaginary, Token, KEYWORD_LOOKUP, get_token
 
 logger = logging.getLogger(__name__)
 
+
+def tokenizing_error(line_number, string, start, tokens):
+    logger.critical("error on line %s character %s, length: %s, ord: %s" % (line_number, start, len(string), ord(string[start])))
+    logger.critical("Tokens: %s" % tokens)
+    logger.critical(string)
+    logger.critical(" " * start + "^")
+    exit(1)
 
 def tokenize(string, line_number=1, file_name=None):
     tokens = []
     start = 0
     while start < len(string):
+        logger.debug("char: %s" % start)
         match, token = get_token(string, start)
         if match:
             # get the string value of the token
             end = match.end()
             value = string[start:end]
+            if len(value) == 0:
+                # somthing went wrong with getting the current token
+                tokenizing_error(line_number, string, start, tokens)
 
             # if the token is an identifier, check if it's a keyword
             if token is BaseToken.IDENTIFIER:
@@ -24,20 +35,23 @@ def tokenize(string, line_number=1, file_name=None):
             tokens.append(Token(value, token, line_number, start, file_name))
             start = end
         else:
-            logger.debug("tokens: %s" % tokens)
-            # print things pretty like
-            raise SyntaxError("invalid token after %s" % tokens[-1])
+            tokenizing_error(line_number, string, start, tokens)
 
     return tokens
 
 
 class FileTokenizer:
-    def __init__(self, file):
+    def __init__(self, file, indention=False, whitespace=WHITESPACE_TOKENS,
+                 filter_out=STRIP_TOKENS, whitespace_skip=WHITESPACE_SKIP):
         self.file = file
         self.file_name = file.name
         self.file_tokens = []
         self.previous_indentation = 0
         self.indentations = []
+        self.indentation = indention
+        self.whitespace = whitespace
+        self.filter_out = filter_out
+        self.whitespace_skip = whitespace_skip
 
     def get_current_indentation(self, tokens):
         """
@@ -46,9 +60,9 @@ class FileTokenizer:
 
         current_indentation = 0
         for token in tokens:
-            if token.token in WHITESPACE_TOKENS:
+            if token.token in self.whitespace:
                 current_indentation += 1
-            elif token.token in [BaseToken.NEWLINE, BaseToken.INLINE_COMMENT]:
+            elif token.token in self.whitespace_skip:
                 # if the current line is empty or just has a comment, ignore its indentation
                 current_indentation = self.previous_indentation
                 break
@@ -71,6 +85,7 @@ class FileTokenizer:
 
     def tokenize_file(self):
         for line_num, line in enumerate(self.file):
+            logger.debug("Line num: %s" % line_num)
             line_tokens = tokenize(line, line_num, self.file_name)
 
             # do whitespace handling
@@ -87,7 +102,7 @@ class FileTokenizer:
             self.previous_indentation = current_indentation
 
             # now that we have taken care of the whitespace-sensitive portion of the code, rip it all out
-            line_tokens = list(filter(lambda x: x.token not in WHITESPACE_TOKENS, line_tokens))
+            line_tokens = list(filter(lambda x: x.token not in self.filter_out, line_tokens))
 
             self.file_tokens += line_tokens
 

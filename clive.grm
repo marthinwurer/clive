@@ -6,10 +6,13 @@
 # $: rule : special root rule
 # starting with the dollar sign signifies a grammar parser command
 # $WHITESPACE: tells the parser what tokens are leading whitespace for the indentation handling
+# $WHITESPACE_SKIP: tells the parser what tokens it should skip whitespace parsing after hitting
 # $FILTER OUT: tells the parser what tokens to filter out after whitespace parsing
 # $INDENT and $DEDENT: special ones for clive, tell the code to add the special tokens on indentation
 $WHITESPACE: SPACE
 $WHITESPACE: TAB
+$WHITESPACE_SKIP: NEWLINE
+$WHITESPACE_SKIP: INLINE_COMMENT
 $FILTER_OUT: SPACE
 $FILTER_OUT: TAB
 $FILTER_OUT: CONTINUED_NEWLINE
