@@ -1,0 +1,83 @@
+# format:
+# TOKEN: "regex"
+# rule: TOKEN rule # rules can be repeated, turn rules with more than 2 into recursive left?
+# # comment
+# @KEYWORD: "stringval" # keywords of the language, get parsed out into their own enum after tokenization
+# $: rule : special root rule
+# starting with the dollar sign signifies a grammar parser command
+# $WHITESPACE: tells the parser what tokens are leading whitespace for the indentation handling
+# $FILTER OUT: tells the parser what tokens to filter out after whitespace parsing
+# $INDENT and $DEDENT: special ones for clive, tell the code to add the special tokens on indentation
+$WHITESPACE: SPACE
+$WHITESPACE: TAB
+$FILTER_OUT: SPACE
+$FILTER_OUT: TAB
+$FILTER_OUT: CONTINUED_NEWLINE
+$INDENT:
+$DEDENT:
+
+# Identifiers
+NUMBER : "[0-9]+"
+COLON : ":"
+COMMA : ","
+EQUALS : "=" # special, side effect!
+PLUS : "\+"
+MINUS : "-"
+AT : "@"
+TAB : "\t"
+SPACE : " "
+PERIOD : "\."
+QUESTION : "\?"
+SEMICOLON : ";"
+OPEN_PAREN : "\("
+CLOSE_PAREN : "\)"
+NEWLINE : "\n"
+CONTINUED_NEWLINE : "\\\n"
+INLINE_COMMENT : "//.*"
+IDENTIFIER : "[a-zA-Z][a-zA-Z0-9_]*"
+
+# Keywords
+@TRUE : "true"
+@FALSE : "false"
+@FUNCTION : "function"
+@RETURN : "return"
+@OPERATOR : "operator" # binds an identifier to an operator
+@ENTITY : "entity"
+@IMPORT : "import"
+
+# Context free grammar time, boys!
+number: NUMBER
+
+constant: @TRUE
+constant: @FALSE
+constant: number
+
+sub_expression: IDENTIFIER
+sub_expression: constant
+sub_expression: ternary
+
+expression: OPEN_PAREN sub_expression CLOSE_PAREN
+expression: sub_expression
+
+ternary: expression QUESTION expression COLON expression
+
+return_statement: @RETURN expression
+
+argument_definition: IDENTIFIER
+argument_definition: IDENTIFIER COLON IDENTIFIER
+
+argument_definitions: argument_definition
+argument_definitions: argument_definition COMMA argument_definitions
+
+function_definition: @FUNCTION IDENTIFIER OPEN_PAREN argument_definitions CLOSE_PAREN return_definitions COLON scope
+
+statement: return_statement
+statement: function_definition
+
+statements: statement statements
+statements: statement
+
+scope: $INDENT statements $DEDENT
+
+
+$: statements

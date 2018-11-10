@@ -1,6 +1,6 @@
 import logging
 
-from tokens import WHITESPACE_TOKENS, CliveToken, CliveImaginary, Token, KEYWORD_LOOKUP, get_token
+from tokens import WHITESPACE_TOKENS, BaseToken, BaseImaginary, Token, KEYWORD_LOOKUP, get_token
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +16,7 @@ def tokenize(string, line_number=1, file_name=None):
             value = string[start:end]
 
             # if the token is an identifier, check if it's a keyword
-            if token is CliveToken.IDENTIFIER:
+            if token is BaseToken.IDENTIFIER:
                 new_token = KEYWORD_LOOKUP.get(value.lower(), None)
                 # if it's a keyword set the identifier to it
                 if new_token:
@@ -48,7 +48,7 @@ class FileTokenizer:
         for token in tokens:
             if token.token in WHITESPACE_TOKENS:
                 current_indentation += 1
-            elif token.token in [CliveToken.NEWLINE, CliveToken.INLINE_COMMENT]:
+            elif token.token in [BaseToken.NEWLINE, BaseToken.INLINE_COMMENT]:
                 # if the current line is empty or just has a comment, ignore its indentation
                 current_indentation = self.previous_indentation
                 break
@@ -60,14 +60,14 @@ class FileTokenizer:
         if current_indentation != self.previous_indentation:
             diff = abs(current_indentation - self.previous_indentation)
             if current_indentation > self.previous_indentation:
-                self.file_tokens.append(Token(diff, CliveImaginary.INDENT, line_num, current_indentation, self.file_name))
+                self.file_tokens.append(Token(diff, BaseImaginary.INDENT, line_num, current_indentation, self.file_name))
                 self.indentations.append(diff)
             else:
                 # can dedent multiple times in a single line
                 while diff > 0:
                     last_diff = self.indentations.pop()
                     diff -= last_diff
-                    self.file_tokens.append(Token(-last_diff, CliveImaginary.DEDENT, line_num, current_indentation + diff, self.file_name))
+                    self.file_tokens.append(Token(-last_diff, BaseImaginary.DEDENT, line_num, current_indentation + diff, self.file_name))
 
     def tokenize_file(self):
         for line_num, line in enumerate(self.file):

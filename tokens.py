@@ -34,12 +34,12 @@ for keyword in CliveKeyword:
     KEYWORD_LOOKUP[keyword.value] = keyword
 
 
-class CliveImaginary(Enum):
+class BaseImaginary(Enum):
     INDENT = "indent"
     DEDENT = "dedent"
 
 
-class CliveToken(Enum):
+class BaseToken(Enum):
     INTEGER = ("[0-9]+")
     COLON = ":"
     COMMA = ","
@@ -67,11 +67,11 @@ class CliveToken(Enum):
         return value
 
 
-WHITESPACE_TOKENS = [CliveToken.SPACE, CliveToken.TAB]
+WHITESPACE_TOKENS = [BaseToken.SPACE, BaseToken.TAB]
 
 
 def get_token(string, start):
-    for parser in CliveToken:
+    for parser in BaseToken:
         match = parser.match(string, start)
         if match:
             return match, parser

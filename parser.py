@@ -1,7 +1,7 @@
 from enum import Enum
-from tokens import CliveToken, CliveKeyword
+from tokens import BaseToken, CliveKeyword
 
-T = CliveToken
+T = BaseToken
 K = CliveKeyword
 
 class CliveGrammar(Enum):
