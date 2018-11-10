@@ -1,0 +1,11 @@
+
+function and(a, b):
+	c = a nand b
+	d = c nand c
+	return d
+
+test main:
+	log info and(0, 0)
+	log info and(0, 1)
+	log info and(1, 0)
+	log info and(1, 1)
