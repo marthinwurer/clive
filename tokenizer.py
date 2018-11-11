@@ -12,11 +12,12 @@ def tokenizing_error(line_number, string, start, tokens):
     logger.critical(" " * start + "^")
     exit(1)
 
-def tokenize(string, line_number=1, file_name=None):
+
+def tokenize(string, line_number=1, file_name=None, valid_tokens=BaseToken, keywords=KEYWORD_LOOKUP):
     tokens = []
     start = 0
     while start < len(string):
-        match, token = get_token(string, start)
+        match, token = get_token(string, start, valid_tokens)
         if match:
             # get the string value of the token
             end = match.end()
@@ -26,8 +27,8 @@ def tokenize(string, line_number=1, file_name=None):
                 tokenizing_error(line_number, string, start, tokens)
 
             # if the token is an identifier, check if it's a keyword
-            if token is BaseToken.IDENTIFIER:
-                new_token = KEYWORD_LOOKUP.get(value.lower(), None)
+            if token == BaseToken.IDENTIFIER:
+                new_token = keywords.get(value.lower(), None)
                 # if it's a keyword set the identifier to it
                 if new_token:
                     token = new_token
@@ -40,7 +41,7 @@ def tokenize(string, line_number=1, file_name=None):
 
 
 class FileTokenizer:
-    def __init__(self, file, indention=False, whitespace=WHITESPACE_TOKENS,
+    def __init__(self, file, indention=False, valid_tokens=BaseToken, keywords=KEYWORD_LOOKUP, whitespace=WHITESPACE_TOKENS,
                  filter_out=STRIP_TOKENS, whitespace_skip=WHITESPACE_SKIP):
         self.file = file
         self.file_name = file.name
@@ -48,6 +49,8 @@ class FileTokenizer:
         self.previous_indentation = 0
         self.indentations = []
         self.indentation = indention
+        self.valid_tokens = valid_tokens
+        self.keywords = keywords
         self.whitespace = whitespace
         self.filter_out = filter_out
         self.whitespace_skip = whitespace_skip
@@ -84,7 +87,7 @@ class FileTokenizer:
 
     def tokenize_file(self):
         for line_num, line in enumerate(self.file):
-            line_tokens = tokenize(line, line_num, self.file_name)
+            line_tokens = tokenize(line, line_num, self.file_name, self.valid_tokens)
 
             # do whitespace handling
 

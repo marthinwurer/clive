@@ -2,7 +2,7 @@ import ast
 import logging
 import re
 
-from tokenizer import tokenize
+from tokenizer import tokenize, FileTokenizer
 from tokens import BaseToken, split_tokens, TokenParser, INDENT_TOKEN, DEDENT_TOKEN
 
 logger = logging.getLogger(__name__)
@@ -25,10 +25,12 @@ class Production:
     def matches(self, tok_list, index):
         matched = 0
         for rule in self.items:
+            logger.debug("Token: %s Trying rule %s" % (tok_list[index].token.name, rule.name))
             rule_matched = rule.matches(tok_list, index + matched)
             if rule_matched == 0:
                 return 0  # all rules in a production must match to be valid
             matched += rule_matched
+        logger.debug("Matched!")
         return matched
 
     def __repr__(self):
@@ -49,9 +51,14 @@ class Rule:
     def matches(self, tok_list, index):
         # returns the number of items matched from the index in the list
         for production in self.productions:
+            logger.debug("Trying %s" % production)
             matched = production.matches(tok_list, index)
             if matched == 0:
                 continue  # try the next production
+            # otherwise we matched!
+            return matched
+        # if none were matched return 0
+        return 0
 
     def __repr__(self):
         return "Rule(name=%r, productions=%r)" % (self.name, self.productions)
@@ -66,6 +73,10 @@ class CFG:
         self.directives = {}
         self.unresolved_directives = {}
         self.base_rule = None
+        self.indentation = False
+        self.whitespace_tokens = []
+        self.whitespace_skip = []
+        self.filter_out = []
 
         self.name_to_rule = {}
         self.name_to_production_names = {}
@@ -176,8 +187,10 @@ class CFG:
 
         # parse the indent directives
         if "$INDENT" in self.unresolved_directives:
+            self.indentation = True
             self.name_to_rule["$INDENT"] = INDENT_TOKEN
         if "$DEDENT" in self.unresolved_directives:
+            self.indentation = True
             self.name_to_rule["$DEDENT"] = DEDENT_TOKEN
 
         fully_resolved = self.name_to_rule  # should be name to rule or name to test?
@@ -211,8 +224,29 @@ class CFG:
             # if you make the end, then append the resolved production to our fully resolved value
             self.directives[name] = resolved
 
-    def tokenize_file(self, file_name):
-        pass
+        self.whitespace_tokens = self.directives.get("$WHITESPACE", [])
+        self.whitespace_skip = self.directives.get("$WHITESPACE_SKIP", [])
+        self.filter_out = self.directives.get("$FILTER_OUT", [])
+        self.base_rule = self.name_to_rule["$"]
 
+    def tokenize_file(self, file_name):
+        # class FileTokenizer:
+        #     def __init__(self, file, indention=False, valid_tokens=BaseToken, whitespace=WHITESPACE_TOKENS,
+        #                  filter_out=STRIP_TOKENS, whitespace_skip=WHITESPACE_SKIP):
+        with open(file_name) as file:
+            tokenizer = FileTokenizer(file, indention=True,
+                                      valid_tokens=self.tokens,
+                                      whitespace=self.whitespace_tokens,
+                                      filter_out=self.filter_out,
+                                      whitespace_skip=self.whitespace_skip)
+            tokens = tokenizer.tokenize_file()
+        return tokens
+
+    def matches(self, token_list):
+        index = 0
+        matched = self.base_rule.matches(token_list, index)
+        tokens = [x.token.name for x in token_list]
+        logger.info(tokens)
+        logger.info(matched)
 
 

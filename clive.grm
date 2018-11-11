@@ -77,10 +77,13 @@ argument_definitions: argument_definition COMMA argument_definitions
 
 return_definitions:
 
-function_definition: @FUNCTION IDENTIFIER OPEN_PAREN argument_definitions CLOSE_PAREN return_definitions COLON scope
+function_definition: @FUNCTION IDENTIFIER OPEN_PAREN argument_definitions CLOSE_PAREN return_definitions
 
-statement: return_statement
-statement: function_definition
+block_definition: function_definition COLON
+
+statement: block_definition NEWLINE scope
+statement: return_statement NEWLINE
+statement: NEWLINE
 
 statements: statement statements
 statements: statement
